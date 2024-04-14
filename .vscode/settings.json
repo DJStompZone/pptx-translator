@@ -1,0 +1,10 @@
+{
+    "python.analysis.extraPaths": [
+        "./stubs",
+        "./src/stubs"
+    ],
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportUnknownMemberType": "none",
+        "reportUnknownVariableType": "none",
+    }
+}

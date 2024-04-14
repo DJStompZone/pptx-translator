@@ -3,11 +3,11 @@ import json
 
 from local_io import extract_to_json
 from local_types import ExtractionMode
-from pptx import Presentation
+from pptx import Presentation  # type: ignore
 from translate import Config, SlideElement, TranslationResult, translate_slide
 
 
-def update_presentation(ppt_path, mode, translated_texts):
+def update_presentation(ppt_path: str, mode: ExtractionMode, translated_texts: list[TranslationResult]):
     """
     Update the given PowerPoint presentation with translated texts.
 
