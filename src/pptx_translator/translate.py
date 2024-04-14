@@ -23,17 +23,21 @@ def format_exception(exc: BaseException) -> str:
 
 
 
-async def translate_text(config: Config, element: SlideElement, retries: int = 3) -> TranslationResult:
+async def translate_slide(config: Config, element: SlideElement, retries: int = 3) -> TranslationResult:
     """
-    Asynchronously translates text using the Cloudflare API with retry logic.
+    Translates the text of a SlideElement using the Cloudflare translation API.
 
     Args:
-        config (Config): Configuration instance containing API keys and settings.
-        element (SlideElement): Tuple containing the element ID and text to translate.
-        retries (int): Number of retries for the API call.
+        config (Config): The configuration object containing API credentials and settings.
+        element (SlideElement): The SlideElement to be translated.
+        retries (int, optional): The number of retries in case of translation failure. Defaults to 3.
 
     Returns:
-        dict: A dictionary with original and translated texts, and error flag if applicable.
+        TranslationResult: The result of the translation, including the original and translated text.
+
+    Raises:
+        httpx.HTTPStatusError: If an HTTP error occurs during the translation request.
+        httpx.RequestError: If the translation request fails due to a network issue.
     """
     url = "https://api.cloudflare.com/client/v4/zones/{config.cloudflare_zone}/dns_records"
     headers = {'Authorization': f'Bearer {config.cloudflare_key}'}
@@ -58,7 +62,7 @@ async def translate_text(config: Config, element: SlideElement, retries: int = 3
             logging.error(f"Request failed: {e}")
         if retries > 0:
             logging.info(f"Retrying translation for element: {element.slide_id}, attempts left: {retries - 1}")
-            return await translate_text(config, element, retries - 1)
+            return await translate_slide(config, element, retries - 1)
         else:
             logging.error(f"Failed to translate element: {element.slide_id}, no retries left.")
             return TranslationResult(
@@ -67,10 +71,18 @@ async def translate_text(config: Config, element: SlideElement, retries: int = 3
                 error = True
             )
 
-async def translate_async(input_file: str, output_file: str):
+async def translate_file(input_file: str, output_file: str):
     """
-    Main function to load text elements from a file, translate them, and save the results.
+    Asynchronously translates the contents of an input file and saves the translation results to an output file.
+
+    Args:
+        input_file (str): The path to the input file containing the text to be translated.
+        output_file (str): The path to the output file where the translation results will be saved.
+
+    Returns:
+        None
     """
+
     logging.basicConfig(level=logging.INFO)
     config: Config = Config.load_from_file('../config.json', input_file, output_file)
 
@@ -81,7 +93,7 @@ async def translate_async(input_file: str, output_file: str):
     batch_size = 5
 
     for i in range(0, len(outputs), batch_size):
-        batch = [translate_text(config, element) for element in outputs[i:i + batch_size]]
+        batch = [translate_slide(config, element) for element in outputs[i:i + batch_size]]
         results = await asyncio.gather(*batch)
         translated.extend(results)
 
@@ -97,4 +109,4 @@ if __name__ == "main":
         sys.exit(1)
     input_file = sys.argv[1]
     output_file = sys.argv[2]
-    asyncio.run(translate_async(input_file, output_file))
+    asyncio.run(translate_file(input_file, output_file))
